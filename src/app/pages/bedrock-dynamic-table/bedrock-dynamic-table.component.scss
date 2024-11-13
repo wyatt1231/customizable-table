@@ -1,0 +1,17 @@
+table {
+  border-collapse: collapse;
+  // border: 1px solid black;
+
+  td {
+    height: 30px;
+
+    div {
+      // padding: 2px;
+    }
+  }
+
+  th {
+    height: 10px;
+    border-right: 4px solid black !important;
+  }
+}

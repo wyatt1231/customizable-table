@@ -1,0 +1,51 @@
+<div style="margin-bottom: 1em">
+  <button (click)="onCreateTable()">Create Table {{ resize_col_index }}</button>
+
+  <button (click)="onMergeCell()">Merge Cells</button>
+</div>
+
+<div style="position: relative">
+  <table border="1" [cellPadding]="0" [cellSpacing]="0">
+    <tr>
+      <th
+        *ngFor="let col of cols; let col_index = index"
+        [style.width.px]="col.width"
+        [style.height.px]="15"
+        class="control"
+        [style.border-right]="
+          !!this.cell_el && resize_col_index == col_index
+            ? '1px solid blue'
+            : 'unset'
+        "
+        (mousedown)="onMouseDown($event, col_index)"
+      ></th>
+    </tr>
+
+    <tr *ngFor="let row of rows; let row_index = index">
+      <ng-container *ngFor="let cell of cells; let cell_index = index">
+        <td
+          *ngIf="row == cell.row"
+          [style.height.px]="cell.height"
+          [style.background-color]="
+            cell.is_selected ? 'rgba(240, 230, 140, .5)' : '#fff'
+          "
+          [rowSpan]="cell.row_span"
+          [style.border-right]="
+            !!this.cell_el && resize_col_index == cell_index
+              ? '1px solid blue'
+              : 'unset'
+          "
+        >
+          <div
+            (mousedown)="onMouseDownRows($event, cell.id)"
+            (contextmenu)="onRightClick($event)"
+            (mousemove)="onMouseMoveCell(cell.id)"
+            (mouseleave)="onMouseLeaveCell(cell.id)"
+          >
+            ROW {{ cell.row }} - COL {{ cell.column }} - ID {{ cell.id }}
+          </div>
+        </td>
+      </ng-container>
+    </tr>
+  </table>
+</div>
