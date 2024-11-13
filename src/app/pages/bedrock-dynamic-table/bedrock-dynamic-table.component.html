@@ -1,7 +1,7 @@
 <div style="margin-bottom: 1em">
   <button (click)="onCreateTable()">Create Table {{ resize_col_index }}</button>
-
   <button (click)="onMergeCell()">Merge Cells</button>
+  <button (click)="onSplitCell()">Split Cells</button>
 </div>
 
 <div style="position: relative">
@@ -24,12 +24,13 @@
     <tr *ngFor="let row of rows; let row_index = index">
       <ng-container *ngFor="let cell of cells; let cell_index = index">
         <td
-          *ngIf="row == cell.row"
+          *ngIf="row == cell.row && cell.is_hidden != true"
           [style.height.px]="cell.height"
           [style.background-color]="
             cell.is_selected ? 'rgba(240, 230, 140, .5)' : '#fff'
           "
           [rowSpan]="cell.row_span"
+          [colSpan]="cell.col_span"
           [style.border-right]="
             !!this.cell_el && resize_col_index == cell_index
               ? '1px solid blue'

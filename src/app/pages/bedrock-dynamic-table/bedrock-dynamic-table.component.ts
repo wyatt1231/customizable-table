@@ -93,62 +93,166 @@ export class BedrockDynamicTableComponent {
   };
 
   onMergeCell = () => {
-    // const first_cell = this.rows.find(
-    //   (p) => p.find((x) => x.is_selected)?.is_selected == true
-    // );
-    // console.log(`first_row`, first_cell);
+    const selected_cells = this.cells.filter((p) => p.is_selected == true);
 
-    let row_spans: any[] = [];
+    if (selected_cells.length <= 0) return;
 
-    let first_row = -1;
-    let last_row = 1;
+    const columns = [...new Set(selected_cells.map((p) => p.column))];
+    const rows = [...new Set(selected_cells.map((p) => p.row))];
 
-    //rowspan
+    const min_col = Math.min(...columns);
+    const max_col = Math.max(...columns);
+    const min_row = Math.min(...rows);
+    const max_row = Math.max(...rows);
 
-    const columns: number[] = [];
-    for (let i = 0; i < this.cells.length; i++) {
-      columns.push(i);
+    this.unmergeCellsInRange(min_row, min_col, max_row, max_col);
+
+    const row_span = max_row - min_row + 1;
+    const cols_span = max_col - min_col + 1;
+
+    const row_span_index = this.cells.findIndex(
+      (p) => p.row == min_row && p.column == min_col
+    );
+
+    this.cells[row_span_index].row_span = row_span;
+    this.cells[row_span_index].col_span = cols_span;
+
+    for (let i = min_row; i <= max_row; i++) {
+      for (let j = min_col; j <= max_col; j++) {
+        if (i !== min_row || j !== min_col) {
+          const index = this.cells.findIndex(
+            (p) => p.row == i && p.column == j
+          );
+          this.cells[index].is_hidden = true;
+        }
+      }
     }
 
-    console.log(`columns`, columns);
+    this.cells.forEach((p) => (p.is_selected = false));
+    this.selected_cell_ids = [];
+  };
 
-    // this.cols.forEach((c, ci) => {
-    //     let f = this.rows.filter(p => p.)
-    // });
+  onSplitCell = () => {
+    const selected_cells = this.cells.filter((p) => p.is_selected == true);
 
-    columns.forEach((column) => {
-      const column_cells = this.getColumnCells(column);
-      const selected = column_cells.filter((p) => p.is_selected);
+    if (selected_cells.length <= 0) return;
 
-      console.log(`selected`, selected);
+    const columns = [...new Set(selected_cells.map((p) => p.column))];
+    const rows = [...new Set(selected_cells.map((p) => p.row))];
 
-      if (selected.length > 0) {
-        // console.log(`column_cells`, column_cells);
-        // console.log(`id`, selected[0].id);
-        // console.log(`len`, selected[selected.length - 1]);
-        // console.log(`len`, selected.length);
+    const min_col = Math.min(...columns);
+    const max_col = Math.max(...columns);
+    const min_row = Math.min(...rows);
+    const max_row = Math.max(...rows);
 
-        // this.rows.forEach((r, ri) => {
-        //   r.forEach((c, ci) => {
-        //     if (c.col_id == column + ``) {
-        //       if (c.id == selected[0].id) {
-        //         c.row_span = selected.length;
-        //       } else {
-        //         if (c.is_selected) {
-        //           c.is_hidden = true;
-        //         }
-        //       }
-        //     }
-        //   });
-        // });
+    this.unmergeCellsInRange(min_row, min_col, max_row, max_col);
 
-        console.log({
-          id: selected[0].id,
-          len: selected.length,
-        });
+    this.cells.forEach((p) => (p.is_selected = false));
+    this.selected_cell_ids = [];
+  };
+
+  unmergeCellsInRange(
+    startRow: number,
+    startCol: number,
+    endRow: number,
+    endCol: number
+  ): void {
+    const mergedCells = this.getMergedCellsInRange(
+      startRow,
+      startCol,
+      endRow,
+      endCol
+    );
+
+    mergedCells.forEach((id) => {
+      const cell = this.cells.find((p) => p.id == id);
+
+      if (!!cell) {
+        const rowspan = cell?.row_span;
+        const colspan = cell?.col_span;
+
+        // Reset the merged cell
+        cell.row_span = 1;
+        cell.col_span = 1;
+
+        // Unhide and restore values of previously hidden cells
+        for (let i = cell.row; i < cell.row + rowspan; i++) {
+          for (let j = cell.column; j < cell.column + colspan; j++) {
+            if (i !== cell.row || j !== cell.column) {
+              const index = this.cells.findIndex(
+                (p) => p.row == i && p.column == j
+              );
+
+              this.cells[index].is_hidden = false;
+              // this.tableData[i][j].hidden = false;
+              // this.tableData[i][j].value = this.tableData[i][j].originalValue;
+            }
+          }
+        }
       }
     });
-  };
+  }
+
+  getMergedCellsInRange(
+    startRow: number,
+    startCol: number,
+    endRow: number,
+    endCol: number
+  ): number[] {
+    const table: Array<ITableCell[]> = [];
+
+    const mergedCells: number[] = [];
+
+    for (let y = 0; y < this.rows.length; y++) {
+      const columns = this.cells.filter((c) => c.row == y);
+      table.push(columns);
+    }
+
+    for (let i = 0; i < table.length; i++) {
+      for (let j = 0; j < table[i].length; j++) {
+        const cell = table[i][j];
+        if (!cell.is_hidden && (cell.row_span > 1 || cell.col_span > 1)) {
+          // Check if this merged cell overlaps with the selection
+          const cellEndRow = i + cell.row_span - 1;
+          const cellEndCol = j + cell.col_span - 1;
+
+          if (
+            !(
+              cellEndRow < startRow ||
+              i > endRow ||
+              cellEndCol < startCol ||
+              j > endCol
+            )
+          ) {
+            mergedCells.push(cell.id);
+          }
+        }
+      }
+    }
+
+    // for (let i = 0; i < this.cells.length; i++) {
+    //   const cell = this.cells[i];
+
+    //   if (cell.is_hidden != true && (cell.row_span > 1 || cell.col_span > 1)) {
+    //     const cellEndRow = cell.row + cell.row_span - 1;
+    //     const cellEndCol = cell.column + cell.col_span - 1;
+
+    //     if (
+    //       !(
+    //         cellEndRow < startRow ||
+    //         i > endRow ||
+    //         cellEndCol < startCol ||
+    //         cell.column > endCol
+    //       )
+    //     ) {
+    //       // mergedCells.push({ row: cell.row, col: cell.column });
+    //       mergedCells.push(cell.id);
+    //     }
+    //   }
+    // }
+
+    return mergedCells;
+  }
 
   onInsertRowAbove = () => {
     this.cells.push();
