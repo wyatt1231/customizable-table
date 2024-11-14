@@ -2,6 +2,7 @@
   <button (click)="onCreateTable()">Create Table {{ resize_col_index }}</button>
   <button (click)="onMergeCell()">Merge Cells</button>
   <button (click)="onSplitCell()">Split Cells</button>
+  <button (click)="getTable()">Get Table</button>
 </div>
 
 <div style="position: relative">
@@ -23,9 +24,10 @@
 
     <tr *ngFor="let row of rows; let row_index = index">
       <ng-container *ngFor="let cell of cells; let cell_index = index">
+        <!-- [style.height.px]="cell.height" -->
         <td
-          *ngIf="row == cell.row && cell.is_hidden != true"
-          [style.height.px]="cell.height"
+          *ngIf="row == cell.row"
+          [style.display]="cell.is_hidden ? 'none' : 'table-cell'"
           [style.background-color]="
             cell.is_selected ? 'rgba(240, 230, 140, .5)' : '#fff'
           "
@@ -36,15 +38,25 @@
               ? '1px solid blue'
               : 'unset'
           "
+          [align]="cell.align"
+          [vAlign]="cell.vAlign"
+          (contextmenu)="onRightClick($event)"
+          (mousemove)="onMouseMoveCell(cell.id)"
+          (mouseleave)="onMouseLeaveCell(cell.id)"
+          (mousedown)="onMouseDownRows($event, cell.id)"
+          style="padding: 5px"
         >
-          <div
-            (mousedown)="onMouseDownRows($event, cell.id)"
-            (contextmenu)="onRightClick($event)"
-            (mousemove)="onMouseMoveCell(cell.id)"
-            (mouseleave)="onMouseLeaveCell(cell.id)"
-          >
-            ROW {{ cell.row }} - COL {{ cell.column }} - ID {{ cell.id }}
-          </div>
+          <textarea
+            (mousedown)="onInputMouseDown($event, cell.id)"
+            (focus)="onInputFocus($event, cell.id)"
+            (dblclick)="onDoubleClick($event)"
+            (blur)="onInputBlur($event, cell_index)"
+            (input)="adjustTextareaHeight($event)"
+            [(ngModel)]="cell.value"
+            [wrap]="'hard'"
+            [rows]="1"
+            [readOnly]="editing_cell_id != cell.id"
+          ></textarea>
         </td>
       </ng-container>
     </tr>

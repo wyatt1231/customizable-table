@@ -6,7 +6,7 @@ import { Component, HostListener } from '@angular/core';
   styleUrls: ['./bedrock-dynamic-table.component.scss'],
 })
 export class BedrockDynamicTableComponent {
-  width = 200; // Initial width of the div
+  width = 100; // Initial width of the div
   resize_col_index: number = -1;
   cell_el?: HTMLElement;
 
@@ -30,7 +30,7 @@ export class BedrockDynamicTableComponent {
     for (let i = 0; i < this.col_length; i++) {
       this.cols.push({
         id: i,
-        width: 200,
+        width: this.width,
         height: 30,
       });
     }
@@ -42,35 +42,23 @@ export class BedrockDynamicTableComponent {
           id: id,
           column: i,
           row: x,
-          width: 120,
-          height: 30,
+          width: this.width,
+          // height: 30,
           row_span: 1,
           col_span: 1,
           is_selected: false,
+          is_hidden: false,
+          data_field: ``,
+          is_read_only: true,
+          value: `${x} - ${i}`,
+          align: `left`,
+          vAlign: `top`,
         };
         this.cells.push(cell);
 
         id++;
       }
     }
-
-    // for (let i = 0; i < this.cols.length; i++) {
-    //   for (let x = 0; x < this.row_length; x++) {
-    //     const cell: ITableCell = {
-    //       id: id,
-    //       column: i,
-    //       width: 120,
-    //       height: 30,
-    //       row_span: 1,
-    //       col_span: 1,
-    //       is_selected: false,
-    //     };
-    //     this.cells.push(cell);
-
-    //     console.log(`i`, i);
-    //     id++;
-    //   }
-    // }
   };
 
   onRightClick(event: MouseEvent): void {
@@ -78,19 +66,6 @@ export class BedrockDynamicTableComponent {
     console.log('Right-click detected at:', event.clientX, event.clientY);
     // Perform any other action, such as showing a custom menu
   }
-
-  getColumnCells = (index: number) => {
-    const cells: ITableCell[] = [];
-    // this.rows.forEach((r) => {
-    //   r.forEach((c) => {
-    //     if (index + `` == c?.col_id) {
-    //       cells.push(c);
-    //     }
-    //   });
-    // });
-
-    return cells;
-  };
 
   onMergeCell = () => {
     const selected_cells = this.cells.filter((p) => p.is_selected == true);
@@ -311,10 +286,11 @@ export class BedrockDynamicTableComponent {
       ];
 
       const i = selected_cell_ids.findIndex((p) => p == id);
+      const found = i !== -1;
 
+      //add the new selected id to the array
       selected_cell_ids.push(id);
-
-      if (i !== -1) {
+      if (found) {
         //if existing remove all remove all id in the same column and rows to the last selected
         const cell_index_to_remove = selected_cell_ids.findIndex(
           (p) => p == this.prev_selected_cell_id
@@ -454,48 +430,22 @@ export class BedrockDynamicTableComponent {
       const td = event.target.closest('td');
 
       if (!!td) {
-        // this.rows[row_index][cell_index].is_selected = true;
-        this.onBeginSelect(id);
-      }
+        this.is_selecting = false;
+        this.selected_cell_ids = [];
 
-      event.preventDefault(); // Prevent text selection
+        this.cells.forEach((p) => {
+          if (p.id == id) {
+            p.is_selected = true;
+            this.is_selecting = true;
+            // this.selected_cell_id.push(id);
+          } else {
+            p.is_selected = false;
+          }
+        });
+      }
+      // event.preventDefault(); // Prevent text selection
     }
   }
-
-  onBeginSelect = (id: number) => {
-    this.is_selecting = false;
-    this.selected_cell_ids = [];
-
-    this.cells.forEach((p) => {
-      if (p.id == id) {
-        p.is_selected = true;
-        this.is_selecting = true;
-        // this.selected_cell_id.push(id);
-      } else {
-        p.is_selected = false;
-      }
-    });
-
-    // if (this.first_selected_cell_id != id) {
-    //   this.first_selected_cell_id = -1;
-
-    //   this.cells.forEach((p) => {
-    //     if (p.id == id) {
-    //       p.is_selected = true;
-    //       this.first_selected_cell_id = id;
-    //       this.is_selecting = true;
-    //       this.selected_cell_id.push(id);
-    //     } else {
-    //       p.is_selected = false;
-    //     }
-    //   });
-    // } else {
-    //   this.cells.forEach((p) => {
-    //     p.is_selected = false;
-    //   });
-    //   this.first_selected_cell_id = -1;
-    // }
-  };
 
   // Stop resizing when the mouse is released
   @HostListener('document:mouseup')
@@ -533,6 +483,97 @@ export class BedrockDynamicTableComponent {
       this.cols[this.resize_col_index].width = width;
     }
   }
+
+  //text inputs
+
+  onDoubleClick = (event: Event) => {
+    const target = event.target as HTMLInputElement;
+
+    target.focus();
+  };
+
+  onInputMouseDown = (event: Event, cell_id: number) => {
+    this.onMouseDownRows(event, cell_id);
+
+    if (this.editing_cell_id != cell_id) {
+      event.preventDefault();
+    } else {
+    }
+  };
+
+  onInputFocus = (event: Event, cell_id: number) => {
+    const target = event.target as HTMLInputElement;
+
+    event.preventDefault();
+
+    if (event.target === event.currentTarget) {
+      const td = target.closest('td');
+
+      if (!!td) {
+        target.style.border = `1px solid blue`;
+
+        this.editing_cell_id = cell_id;
+
+        console.log(`this.editing_cell_id `, this.editing_cell_id);
+      }
+    }
+  };
+
+  onInputBlur = (event: Event, cell_index: number) => {
+    const target = event.target as HTMLInputElement;
+    const td = target.closest('td');
+
+    if (!!td) {
+      // td.style.border = `1px solid black`;
+
+      // if (cell_index == this.cells.length - 1) {
+      //   this.editing_cell_id = this.cells[0].id;
+      //   const table = target.closest('table');
+
+      //   const first_cell = table?.querySelector(`td`);
+
+      //   if (!!first_cell) {
+      //     first_cell.style.border = `1px solid blue`;
+      //   }
+      // } else {
+      // }
+
+      target.style.border = `1px solid transparent`;
+      this.editing_cell_id = -1;
+
+      // event.preventDefault();
+    }
+  };
+
+  getTextColCount = (value: string) => {
+    const split = value.split('\n');
+
+    const lengths = split.map((p) => p.length);
+
+    const max = Math.max(...lengths);
+
+    return max > 0 ? max : 1;
+    // return split[0].length > 0 ? split[0].length : 1;
+  };
+
+  getTextRowCount = (value: string) => {
+    const split = value.split('\n');
+
+    return split.length;
+  };
+
+  editing_cell_id = -1;
+
+  adjustTextareaHeight(event: Event): void {
+    const textarea = event.target as HTMLTextAreaElement;
+    textarea.style.height = 'auto'; // Reset height to allow shrinking
+
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }
+
+  getTable = () => {
+    console.log(this.cells);
+  };
 }
 
 interface ITableCol {
@@ -546,11 +587,17 @@ interface ITableCell {
   column: number;
   row: number;
   width: number;
-  height: number;
+  // height: number;
   row_span: number;
   col_span: number;
   is_selected: boolean;
-  is_hidden?: boolean;
+  is_hidden: boolean;
+  //
+  data_field: string;
+  is_read_only: boolean;
+  value: string;
+  align: `left` | `center` | `right`;
+  vAlign: `top` | `middle` | `bottom`;
 }
 
 interface ILastSelectedCell {
